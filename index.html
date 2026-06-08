@@ -13,39 +13,27 @@
 :root {
   --text-primary:   #FAFAFA;
   --text-secondary: #B8B6B0;
-  --text-tertiary:  #76746E;
+  --text-tertiary:  #6B6965;
   --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; background: #050506; color: var(--text-secondary); font-family: var(--font); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; }
+html, body { margin: 0; padding: 0; background: #080809; color: var(--text-secondary); font-family: var(--font); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; }
 body {
   min-height: 100vh; position: relative; overflow-x: hidden;
-  padding: 0 max(20px, env(safe-area-inset-right)) 80px max(20px, env(safe-area-inset-left));
-}
-body::before {
-  content: ''; position: fixed; inset: 0;
-  background:
-    radial-gradient(circle at 80% 12%, rgba(107, 227, 164, 0.13), transparent 45%),
-    radial-gradient(circle at 20% 88%, rgba(125, 211, 252, 0.09), transparent 50%);
-  filter: blur(48px); pointer-events: none; z-index: -2;
-  animation: drift 38s ease-in-out infinite alternate;
+  padding: 0 max(18px, env(safe-area-inset-right)) 88px max(18px, env(safe-area-inset-left));
 }
 body::after {
   content: ''; position: fixed; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(255,255,255,0.012) 1px, transparent 1px);
   background-size: 3px 3px; pointer-events: none; z-index: -1;
 }
-@keyframes drift {
-  0%   { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(-20px, 12px, 0); }
-}
 
-.page { max-width: 900px; margin: 0 auto; padding-top: 22px; }
+.page { max-width: 900px; margin: 0 auto; padding-top: 20px; }
 
 .dash-title {
-  margin: 0 0 20px; font-size: 26px; font-weight: 700; letter-spacing: -0.025em;
-  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 130%);
+  margin: 0 0 18px; font-size: 26px; font-weight: 700; letter-spacing: -0.025em;
+  background: linear-gradient(180deg, #FFFFFF 0%, #C0BDB6 130%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
 }
@@ -54,74 +42,85 @@ body::after {
 .bento-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 168px;
-  gap: 14px;
+  grid-auto-rows: 172px;
+  gap: 12px;
   grid-auto-flow: dense;
 }
 
 .tile {
   --accent: #6BE3A4;
   display: flex; flex-direction: column;
-  padding: 18px 20px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 18px; text-decoration: none;
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.40);
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  padding: 16px 18px 15px;
+  /* dark glass base + per-tile accent bloom in top-right */
+  background-color: rgba(12, 12, 14, 0.90);
+  background-image: radial-gradient(ellipse at 94% 6%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 54%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px; text-decoration: none;
+  backdrop-filter: blur(28px) saturate(1.3);
+  -webkit-backdrop-filter: blur(28px) saturate(1.3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255,255,255,0.04);
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
   overflow: hidden; position: relative;
 }
 .tile:hover {
   transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55);
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 .tile:active { transform: translateY(-1px); }
 .tile.big  { grid-column: span 2; grid-row: span 2; }
 .tile.wide { grid-column: span 2; }
 
+/* bigger bloom for the large tile */
+.tile.big {
+  background-image: radial-gradient(ellipse at 88% 8%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 52%);
+}
+
 .tile-top { display: flex; justify-content: space-between; align-items: flex-start; }
 
 .tile-num {
   font-family: var(--font-mono); font-size: 11px; font-weight: 600;
-  color: rgba(255, 255, 255, 0.28); letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.22); letter-spacing: 0.06em;
 }
-.tile-icon { font-size: 26px; line-height: 1; filter: drop-shadow(0 0 8px var(--accent)); }
-.tile.big .tile-icon { font-size: 36px; }
-
-.tile-icon-dollar {
-  font-size: 26px; font-weight: 800; font-family: var(--font);
-  color: var(--accent); line-height: 1;
-  text-shadow: 0 0 12px var(--accent);
+.tile-icon {
+  font-size: 26px; line-height: 1;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 80%, transparent));
 }
+.tile.big .tile-icon { font-size: 34px; }
 
 .tile-spacer { flex: 1; }
 
 .tile-title {
-  font-size: 18px; font-weight: 700; color: var(--text-primary);
-  letter-spacing: -0.01em; margin-bottom: 5px;
+  font-size: 17px; font-weight: 700; color: var(--text-primary);
+  letter-spacing: -0.015em; margin-bottom: 4px;
 }
-.tile.big .tile-title { font-size: 24px; }
+.tile.big .tile-title { font-size: 23px; }
 
 .tile-footer { display: flex; justify-content: space-between; align-items: center; }
 .tile-sub {
-  font-size: 11.5px; color: var(--text-tertiary);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 85%;
+  font-size: 11px; color: var(--text-tertiary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 82%;
 }
 .tile-arrow {
-  font-size: 16px; color: var(--accent); flex-shrink: 0;
+  font-size: 15px; color: color-mix(in srgb, var(--accent) 80%, transparent); flex-shrink: 0;
   transition: transform 0.2s ease;
 }
 .tile:hover .tile-arrow { transform: translateX(5px); }
+
+/* dead tile (no page yet) */
+a.tile-dead { cursor: default; }
+a.tile-dead:hover { transform: none; border-color: rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.55); }
+a.tile-dead:hover .tile-arrow { transform: none; }
 
 /* ── Responsive ──────────────────────────────────────── */
 @media (max-width: 720px) {
   .bento-grid { grid-template-columns: repeat(2, 1fr); }
   .tile.big { grid-row: span 1; }
+  .tile.big .tile-icon { font-size: 28px; }
+  .tile.big .tile-title { font-size: 19px; }
 }
 @media (max-width: 440px) {
-  .bento-grid { grid-template-columns: 1fr; grid-auto-rows: 140px; }
+  .bento-grid { grid-template-columns: 1fr; grid-auto-rows: 130px; }
   .tile.big, .tile.wide { grid-column: span 1; }
   .dash-title { font-size: 22px; }
 }
@@ -133,10 +132,10 @@ body::after {
 
   <div class="bento-grid">
 
-    <!-- ·01 Main -->
-    <a href="main.html" class="tile big" style="--accent: #6BE3A4">
+    <!-- · 01 Main -->
+    <a href="main.html" class="tile big" style="--accent: #5EE8A4">
       <div class="tile-top">
-        <span class="tile-num">·01</span>
+        <span class="tile-num">· 01</span>
         <span class="tile-icon">🏠</span>
       </div>
       <div class="tile-spacer"></div>
@@ -147,10 +146,10 @@ body::after {
       </div>
     </a>
 
-    <!-- ·02 Fitness -->
-    <a href="gym.html" class="tile wide" style="--accent: #7DD3FC">
+    <!-- · 02 Fitness -->
+    <a href="gym.html" class="tile wide" style="--accent: #FBBF24">
       <div class="tile-top">
-        <span class="tile-num">·02</span>
+        <span class="tile-num">· 02</span>
         <span class="tile-icon">💪</span>
       </div>
       <div class="tile-spacer"></div>
@@ -161,10 +160,10 @@ body::after {
       </div>
     </a>
 
-    <!-- ·03 Health -->
-    <a href="health.html" class="tile" style="--accent: #A7F3D0">
+    <!-- · 03 Health -->
+    <a href="health.html" class="tile" style="--accent: #F87171">
       <div class="tile-top">
-        <span class="tile-num">·03</span>
+        <span class="tile-num">· 03</span>
         <span class="tile-icon">♥️</span>
       </div>
       <div class="tile-spacer"></div>
@@ -175,10 +174,10 @@ body::after {
       </div>
     </a>
 
-    <!-- ·04 Water -->
+    <!-- · 04 Water -->
     <a href="po-water.html" class="tile" style="--accent: #60A5FA">
       <div class="tile-top">
-        <span class="tile-num">·04</span>
+        <span class="tile-num">· 04</span>
         <span class="tile-icon">💧</span>
       </div>
       <div class="tile-spacer"></div>
@@ -189,16 +188,30 @@ body::after {
       </div>
     </a>
 
-    <!-- ·05 Finance -->
-    <a href="finance.html" class="tile wide" style="--accent: #F2C063">
+    <!-- · 05 Finance -->
+    <a href="finance.html" class="tile wide" style="--accent: #F59E0B">
       <div class="tile-top">
-        <span class="tile-num">·05</span>
-        <span class="tile-icon-dollar">$</span>
+        <span class="tile-num">· 05</span>
+        <span class="tile-icon">📊</span>
       </div>
       <div class="tile-spacer"></div>
       <div class="tile-title">Finance</div>
       <div class="tile-footer">
         <span class="tile-sub">Net worth &amp; spending</span>
+        <span class="tile-arrow">→</span>
+      </div>
+    </a>
+
+    <!-- · 06 Caffeine -->
+    <a href="#" class="tile tile-dead" style="--accent: #FB923C" onclick="return false">
+      <div class="tile-top">
+        <span class="tile-num">· 06</span>
+        <span class="tile-icon">☕</span>
+      </div>
+      <div class="tile-spacer"></div>
+      <div class="tile-title">Caffeine</div>
+      <div class="tile-footer">
+        <span class="tile-sub">Intake &amp; timing</span>
         <span class="tile-arrow">→</span>
       </div>
     </a>
