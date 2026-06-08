@@ -79,7 +79,7 @@
 }
 .topbar-finance-btn:hover { background: rgba(255, 255, 255, 0.08); }
 .topbar-finance-icon {
-  font-size: 20px; line-height: 1; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
   filter: grayscale(100%) brightness(1.4); opacity: 0.85;
 }
 .bottombar {
@@ -99,7 +99,7 @@
   -webkit-tap-highlight-color: transparent; transition: color 0.15s;
 }
 .bottombar-tab-icon {
-  font-size: 24px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
   filter: grayscale(100%) brightness(1.2); opacity: 0.55;
   transition: opacity 0.15s, filter 0.15s, transform 0.10s;
 }
@@ -117,8 +117,8 @@ body.has-bottombar {
   .topbar-pill-count { font-size: 12px; }
   .topbar-water-add { width: 40px; font-size: 18px; }
   .topbar-finance-btn { width: 40px; height: 38px; }
-  .topbar-finance-icon { font-size: 18px; }
-  .bottombar-tab-icon { font-size: 22px; }
+  .topbar-finance-icon svg { width: 18px; height: 18px; }
+  .bottombar-tab-icon svg { width: 22px; height: 22px; }
   .bottombar-tab { font-size: 10px; }
 }
 html, body { -webkit-text-size-adjust: 100%; }
@@ -158,20 +158,20 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     <button class="topbar-water-add" id="topbarWaterAdd" aria-label="Log one drink" type="button">+</button>
   </div>
   <a href="finance.html" class="topbar-finance-btn" id="topbarFinance" aria-label="Finance">
-    <span class="topbar-finance-icon">$</span>
+    <span class="topbar-finance-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
   </a>
 </header>`;
 
   const bottombarHtml = `
 <nav class="bottombar" id="bottombar" role="navigation" aria-label="Main tabs">
   <a href="index.html" class="bottombar-tab" data-page="main">
-    <span class="bottombar-tab-icon">🏡</span><span>Main</span>
+    <span class="bottombar-tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span><span>Main</span>
   </a>
   <a href="health.html" class="bottombar-tab" data-page="health">
-    <span class="bottombar-tab-icon">🩷</span><span>Health</span>
+    <span class="bottombar-tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span>Health</span>
   </a>
   <a href="gym.html" class="bottombar-tab" data-page="fitness">
-    <span class="bottombar-tab-icon">🏋️</span><span>Fitness</span>
+    <span class="bottombar-tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="3" height="10" rx="1"/><rect x="5" y="10" width="2" height="4" rx="0.5"/><line x1="7" y1="12" x2="17" y2="12"/><rect x="17" y="10" width="2" height="4" rx="0.5"/><rect x="19" y="7" width="3" height="10" rx="1"/></svg></span><span>Fitness</span>
   </a>
 </nav>`;
 
