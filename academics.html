@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<meta name="color-scheme" content="dark">
+<title>Academics — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+<style>
+:root {
+  --bg: #050506;
+  --bg-card: rgba(255,255,255,0.04);
+  --bg-secondary: rgba(255,255,255,0.035);
+  --bg-input: rgba(0,0,0,0.28);
+  --border: rgba(255,255,255,0.06);
+  --border-soft: rgba(255,255,255,0.04);
+  --border-strong: rgba(255,255,255,0.12);
+  --text-primary: #FAFAFA;
+  --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E;
+  --text-quaternary: #4D4B47;
+  --accent: #A78BFA;
+  --accent-glow: rgba(167,139,250,0.28);
+  --success: #6BE3A4;
+  --warning: #F2C063;
+  --danger: #F87171;
+  --font: -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --font-mono: ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+* { box-sizing: border-box; }
+html,body { margin:0; padding:0; background:var(--bg); color:var(--text-secondary); font-family:var(--font); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+body { min-height:100vh; position:relative; overflow-x:hidden; }
+
+body::before {
+  content:''; position:fixed; inset:0;
+  background:
+    radial-gradient(60% 50% at 78% 10%, rgba(167,139,250,0.13) 0%, transparent 60%),
+    radial-gradient(50% 40% at 18% 85%, rgba(107,227,164,0.06) 0%, transparent 60%);
+  filter:blur(40px); pointer-events:none; z-index:0;
+  animation:drift 36s ease-in-out infinite alternate;
+}
+body::after {
+  content:''; position:fixed; inset:0;
+  background-image:radial-gradient(rgba(255,255,255,0.014) 1px,transparent 1px);
+  background-size:3px 3px; pointer-events:none; z-index:1;
+}
+@keyframes drift { 0%{transform:translate(0,0)} 100%{transform:translate(-2%,2%)} }
+
+main {
+  position:relative; z-index:2;
+  max-width:720px; margin:0 auto;
+  padding: 56px max(20px,env(safe-area-inset-right)) 100px max(20px,env(safe-area-inset-left));
+}
+
+.page-hero { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+.page-hero-icon { font-size:28px; line-height:1; }
+.page-hero-title { font-size:22px; font-weight:700; color:var(--text-primary); letter-spacing:-0.02em; margin:0; }
+
+.section-title {
+  font-family:var(--font-mono); font-size:11px; font-weight:600;
+  letter-spacing:0.18em; text-transform:uppercase; color:var(--text-tertiary);
+  display:flex; align-items:center; gap:10px; margin:0;
+}
+.section-title::before { content:'≡'; font-size:13px; opacity:0.5; }
+
+.card {
+  background:var(--bg-card); border:1px solid var(--border);
+  border-radius:18px; padding:20px 18px 18px;
+  backdrop-filter:blur(24px) saturate(1.2); -webkit-backdrop-filter:blur(24px) saturate(1.2);
+  box-shadow:0 8px 32px rgba(0,0,0,0.4); margin-bottom:14px;
+}
+.card-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.add-btn {
+  padding:5px 12px; border-radius:8px;
+  background:rgba(167,139,250,0.10); border:1px solid rgba(167,139,250,0.22);
+  color:var(--accent); font-size:12px; font-weight:600; font-family:var(--font);
+  cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent;
+  transition:background 0.15s;
+}
+.add-btn:hover { background:rgba(167,139,250,0.18); }
+.empty { text-align:center; padding:24px 0; color:var(--text-quaternary); font-size:13px; }
+
+/* ── Study Clock ── */
+.clock-wrap { text-align:center; padding:6px 0 2px; }
+.clock-status-row { display:flex; align-items:center; justify-content:center; gap:7px; min-height:18px; margin-bottom:4px; }
+.clock-dot {
+  width:8px; height:8px; border-radius:50%; background:var(--success);
+  box-shadow:0 0 8px var(--success); opacity:0; transition:opacity 0.2s;
+  animation:cpulse 1.4s ease-in-out infinite;
+}
+.clock-dot.on { opacity:1; }
+@keyframes cpulse { 0%,100%{box-shadow:0 0 0 0 rgba(107,227,164,0.55)} 50%{box-shadow:0 0 0 6px rgba(107,227,164,0)} }
+.clock-status-label { font-size:11px; font-weight:600; color:var(--success); letter-spacing:0.05em; display:none; }
+
+.clock-display {
+  font-family:var(--font-mono); font-size:56px; font-weight:300;
+  color:var(--text-primary); letter-spacing:-0.02em; font-variant-numeric:tabular-nums;
+  margin:6px 0 18px; line-height:1;
+}
+.clock-stats {
+  display:flex; border:1px solid var(--border); border-radius:12px;
+  overflow:hidden; margin-bottom:20px;
+}
+.clock-stat {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  padding:10px 6px; gap:3px; border-right:1px solid var(--border);
+}
+.clock-stat:last-child { border-right:none; }
+.clock-stat-val { font-family:var(--font-mono); font-size:16px; font-weight:600; color:var(--text-primary); }
+.clock-stat-lbl { font-size:10px; font-weight:500; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.05em; }
+.clock-btn {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:12px 32px; border-radius:12px; cursor:pointer;
+  background:rgba(107,227,164,0.11); border:1px solid rgba(107,227,164,0.26);
+  color:var(--success); font-size:14px; font-weight:600; font-family:var(--font);
+  -webkit-tap-highlight-color:transparent; transition:background 0.15s, transform 0.1s;
+}
+.clock-btn:hover { background:rgba(107,227,164,0.18); }
+.clock-btn:active { transform:scale(0.97); }
+.clock-btn.stop { background:rgba(248,113,113,0.10); border-color:rgba(248,113,113,0.26); color:var(--danger); }
+.clock-btn.stop:hover { background:rgba(248,113,113,0.17); }
+
+/* ── Weekly Tasks ── */
+.week-meta { font-size:12px; color:var(--text-quaternary); }
+.day-tabs { display:flex; gap:5px; overflow-x:auto; padding-bottom:2px; margin-bottom:14px; scrollbar-width:none; }
+.day-tabs::-webkit-scrollbar { display:none; }
+.day-tab {
+  flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:3px;
+  padding:8px 9px; border-radius:10px; min-width:48px;
+  border:1px solid var(--border); background:var(--bg-secondary);
+  cursor:pointer; -webkit-tap-highlight-color:transparent; transition:background 0.15s,border-color 0.15s;
+}
+.day-tab-name { font-size:10.5px; font-weight:700; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.04em; }
+.day-tab-num  { font-size:15px; font-weight:700; color:var(--text-secondary); font-family:var(--font-mono); }
+.day-tab-dot  { width:4px; height:4px; border-radius:50%; background:var(--text-tertiary); opacity:0; transition:opacity 0.15s; }
+.day-tab.has-tasks .day-tab-dot { opacity:0.7; }
+.day-tab.today .day-tab-name, .day-tab.today .day-tab-num { color:var(--accent); }
+.day-tab.active { background:rgba(167,139,250,0.10); border-color:rgba(167,139,250,0.30); }
+.day-tab.active .day-tab-name { color:var(--accent); }
+.day-tab.active .day-tab-num  { color:var(--text-primary); }
+.day-tab.active .day-tab-dot  { background:var(--accent); }
+
+.task-add-row { display:flex; gap:8px; margin-bottom:10px; }
+.task-input {
+  flex:1; background:var(--bg-input); border:1px solid var(--border-strong);
+  border-radius:10px; padding:9px 12px; color:var(--text-primary);
+  font-size:14px; font-family:var(--font); -webkit-appearance:none;
+}
+.task-input:focus { outline:none; border-color:var(--accent); }
+.task-input::placeholder { color:var(--text-quaternary); }
+.task-submit {
+  padding:9px 14px; border-radius:10px;
+  background:rgba(167,139,250,0.12); border:1px solid rgba(167,139,250,0.26);
+  color:var(--accent); font-size:20px; cursor:pointer; font-family:var(--font);
+  -webkit-tap-highlight-color:transparent; transition:background 0.15s;
+}
+.task-submit:hover { background:rgba(167,139,250,0.20); }
+
+.task-list { display:flex; flex-direction:column; gap:5px; min-height:4px; }
+.task-item {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 11px; border-radius:10px;
+  background:var(--bg-secondary); border:1px solid transparent;
+  transition:background 0.15s;
+}
+.task-item:hover { background:rgba(255,255,255,0.05); }
+.task-cb {
+  width:20px; height:20px; border-radius:5px; flex-shrink:0;
+  border:2px solid var(--border-strong); background:transparent;
+  cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center;
+  font-size:11px; color:transparent; transition:all 0.18s;
+}
+.task-cb:hover { border-color:var(--accent); }
+.task-cb.done { background:var(--accent); border-color:var(--accent); color:#050506; }
+.task-text { flex:1; font-size:14px; color:var(--text-primary); }
+.task-item.is-done .task-text { text-decoration:line-through; color:var(--text-tertiary); }
+.task-del {
+  width:26px; height:26px; border-radius:6px; flex-shrink:0;
+  border:none; background:transparent; color:var(--text-quaternary); font-size:16px;
+  cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center;
+  -webkit-tap-highlight-color:transparent; opacity:0;
+  transition:opacity 0.15s, background 0.15s, color 0.15s;
+}
+.task-item:hover .task-del { opacity:1; }
+.task-del:hover { background:rgba(248,113,113,0.13); color:var(--danger); }
+
+/* ── Shared list items ── */
+.list-item {
+  display:flex; align-items:center; gap:11px;
+  padding:11px 13px; border-radius:12px;
+  background:var(--bg-secondary); border:1px solid var(--border-soft);
+  margin-bottom:7px; transition:background 0.15s;
+}
+.list-item:last-child { margin-bottom:0; }
+.list-item:hover { background:rgba(255,255,255,0.05); }
+.item-check {
+  width:20px; height:20px; border-radius:5px; flex-shrink:0;
+  border:2px solid var(--border-strong); background:transparent;
+  cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center;
+  font-size:11px; color:transparent; transition:all 0.18s;
+}
+.item-check:hover { border-color:var(--success); }
+.item-check.done { background:var(--success); border-color:var(--success); color:#050506; }
+.item-left  { flex:1; min-width:0; }
+.item-right { display:flex; align-items:center; gap:7px; flex-shrink:0; }
+.item-title { font-size:14px; font-weight:600; color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.item-sub   { font-size:12px; color:var(--text-tertiary); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.list-item.is-done .item-title { text-decoration:line-through; color:var(--text-tertiary); }
+.list-item.is-done .item-sub   { color:var(--text-quaternary); }
+.item-del {
+  width:26px; height:26px; border-radius:6px; flex-shrink:0;
+  border:none; background:transparent; color:var(--text-quaternary); font-size:16px;
+  cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center;
+  -webkit-tap-highlight-color:transparent; opacity:0;
+  transition:opacity 0.15s, background 0.15s, color 0.15s;
+}
+.list-item:hover .item-del { opacity:1; }
+.item-del:hover { background:rgba(248,113,113,0.13); color:var(--danger); }
+
+.due-pill {
+  font-size:11px; font-weight:600; font-family:var(--font-mono);
+  padding:3px 8px; border-radius:6px; white-space:nowrap; flex-shrink:0;
+  background:rgba(255,255,255,0.05); color:var(--text-tertiary);
+}
+.due-pill.soon    { background:rgba(242,192,99,0.14);  color:var(--warning); }
+.due-pill.overdue { background:rgba(248,113,113,0.14); color:var(--danger);  }
+.days-pill {
+  font-size:11px; font-weight:700; font-family:var(--font-mono);
+  padding:3px 8px; border-radius:6px; white-space:nowrap; flex-shrink:0;
+  background:rgba(107,227,164,0.11); color:var(--success);
+}
+.days-pill.soon   { background:rgba(242,192,99,0.14);  color:var(--warning); }
+.days-pill.urgent { background:rgba(248,113,113,0.14); color:var(--danger);  }
+.days-pill.past   { background:rgba(255,255,255,0.05); color:var(--text-quaternary); }
+
+.status-select {
+  background:rgba(255,255,255,0.06); border:1px solid var(--border-strong);
+  border-radius:8px; padding:4px 22px 4px 8px;
+  color:var(--text-secondary); font-size:12px; font-weight:600; font-family:var(--font);
+  cursor:pointer; -webkit-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2376746E' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 7px center;
+}
+.status-select:focus { outline:none; }
+.ss-planning   { color:var(--text-tertiary);  border-color:rgba(255,255,255,0.12); }
+.ss-applied    { color:#7DD3FC; border-color:rgba(125,211,252,0.30); }
+.ss-accepted   { color:var(--success); border-color:rgba(107,227,164,0.30); }
+.ss-rejected   { color:var(--danger);  border-color:rgba(248,113,113,0.30); }
+.ss-waitlisted { color:var(--warning); border-color:rgba(242,192,99,0.30);  }
+
+/* ── Modals ── */
+.modal-bg {
+  position:fixed; inset:0; z-index:100;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+  background:rgba(0,0,0,0.68); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  opacity:0; pointer-events:none; transition:opacity 0.22s ease;
+}
+.modal-bg.show { opacity:1; pointer-events:all; }
+.modal {
+  position:relative; width:min(420px,100%); max-height:90vh;
+  overflow-y:auto; overscroll-behavior:contain;
+  background:rgba(13,13,15,0.98); border:1px solid rgba(255,255,255,0.09);
+  border-radius:20px; padding:24px 22px 28px;
+  box-shadow:0 24px 72px rgba(0,0,0,0.80);
+}
+.modal-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.modal-title { font-size:16px; font-weight:700; color:var(--text-primary); }
+.modal-x {
+  width:30px; height:30px; border-radius:8px; border:none;
+  background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.55);
+  font-size:18px; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; padding:0; -webkit-tap-highlight-color:transparent; transition:background 0.15s;
+}
+.modal-x:hover { background:rgba(255,255,255,0.10); color:#FAFAFA; }
+.f-field { margin-bottom:14px; }
+.f-label { display:block; font-size:12px; font-weight:600; color:var(--text-tertiary); margin-bottom:5px; letter-spacing:0.03em; }
+.f-input, .f-select {
+  width:100%; background:var(--bg-input); border:1px solid var(--border-strong);
+  border-radius:10px; padding:10px 12px; color:var(--text-primary);
+  font-size:14px; font-family:var(--font); -webkit-appearance:none; appearance:none;
+}
+.f-input:focus, .f-select:focus { outline:none; border-color:var(--accent); }
+.f-input::placeholder { color:var(--text-quaternary); }
+.f-select { cursor:pointer; }
+.f-select option { background:#1a1a1c; }
+.primary-btn {
+  width:100%; padding:12px; border-radius:12px; margin-top:6px;
+  border:1px solid rgba(167,139,250,0.28); background:rgba(167,139,250,0.12);
+  color:var(--accent); font-size:14px; font-weight:600; font-family:var(--font);
+  cursor:pointer; -webkit-tap-highlight-color:transparent; transition:background 0.15s;
+}
+.primary-btn:hover { background:rgba(167,139,250,0.20); }
+
+@media (max-width:480px) {
+  .clock-display { font-size:44px; }
+  .day-tab { min-width:44px; padding:7px 7px; }
+}
+</style>
+</head>
+<body>
+<main>
+  <div class="page-hero">
+    <span class="page-hero-icon">📚</span>
+    <h1 class="page-hero-title">Academics</h1>
+  </div>
+
+  <!-- Study Clock -->
+  <section class="card">
+    <div class="section-title" style="margin-bottom:14px">Study Clock</div>
+    <div class="clock-wrap">
+      <div class="clock-status-row">
+        <span class="clock-dot" id="clockDot"></span>
+        <span class="clock-status-label" id="clockLabel">Session active</span>
+      </div>
+      <div class="clock-display" id="clockDisplay">00:00:00</div>
+      <div class="clock-stats">
+        <div class="clock-stat"><span class="clock-stat-val" id="statToday">—</span><span class="clock-stat-lbl">Today</span></div>
+        <div class="clock-stat"><span class="clock-stat-val" id="statWeek">—</span><span class="clock-stat-lbl">This week</span></div>
+        <div class="clock-stat"><span class="clock-stat-val" id="statTotal">—</span><span class="clock-stat-lbl">All time</span></div>
+      </div>
+      <button class="clock-btn" id="clockBtn" type="button">▶&nbsp; Start Session</button>
+    </div>
+  </section>
+
+  <!-- Weekly Tasks -->
+  <section class="card">
+    <div class="card-hdr">
+      <div class="section-title">Weekly Tasks</div>
+      <span class="week-meta" id="weekMeta"></span>
+    </div>
+    <div class="day-tabs" id="dayTabs"></div>
+    <div class="task-add-row">
+      <input class="task-input" type="text" id="taskInput" placeholder="Add a task…" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="task-submit" id="taskSubmit" type="button">+</button>
+    </div>
+    <div class="task-list" id="taskList"></div>
+  </section>
+
+  <!-- Homework -->
+  <section class="card">
+    <div class="card-hdr">
+      <div class="section-title">Homework</div>
+      <button class="add-btn" id="hwAddBtn" type="button">+ Add</button>
+    </div>
+    <div id="hwList"></div>
+  </section>
+
+  <!-- Exams -->
+  <section class="card">
+    <div class="card-hdr">
+      <div class="section-title">Exams</div>
+      <button class="add-btn" id="examAddBtn" type="button">+ Add</button>
+    </div>
+    <div id="examList"></div>
+  </section>
+
+  <!-- College Tracker -->
+  <section class="card">
+    <div class="card-hdr">
+      <div class="section-title">College Tracker</div>
+      <button class="add-btn" id="colAddBtn" type="button">+ Add</button>
+    </div>
+    <div id="colList"></div>
+  </section>
+</main>
+
+<!-- Homework modal -->
+<div class="modal-bg" id="hwModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Add Homework</span>
+      <button class="modal-x" id="hwClose" type="button">×</button>
+    </div>
+    <div class="f-field"><label class="f-label">Subject</label><input class="f-input" type="text" id="hwSubject" placeholder="e.g. Maths"></div>
+    <div class="f-field"><label class="f-label">Title / Description</label><input class="f-input" type="text" id="hwTitle" placeholder="e.g. Problem Set 3"></div>
+    <div class="f-field"><label class="f-label">Deadline</label><input class="f-input" type="date" id="hwDeadline"></div>
+    <button class="primary-btn" id="hwSave" type="button">Add Homework</button>
+  </div>
+</div>
+
+<!-- Exam modal -->
+<div class="modal-bg" id="examModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Add Exam</span>
+      <button class="modal-x" id="examClose" type="button">×</button>
+    </div>
+    <div class="f-field"><label class="f-label">Subject</label><input class="f-input" type="text" id="examSubject" placeholder="e.g. Physics"></div>
+    <div class="f-field"><label class="f-label">Date</label><input class="f-input" type="date" id="examDate"></div>
+    <div class="f-field"><label class="f-label">Syllabus / Notes</label><input class="f-input" type="text" id="examSyllabus" placeholder="e.g. Chapters 1–5"></div>
+    <button class="primary-btn" id="examSave" type="button">Add Exam</button>
+  </div>
+</div>
+
+<!-- College modal -->
+<div class="modal-bg" id="colModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Add College</span>
+      <button class="modal-x" id="colClose" type="button">×</button>
+    </div>
+    <div class="f-field"><label class="f-label">College / University</label><input class="f-input" type="text" id="colName" placeholder="e.g. MIT"></div>
+    <div class="f-field"><label class="f-label">Course / Program</label><input class="f-input" type="text" id="colCourse" placeholder="e.g. Computer Science"></div>
+    <div class="f-field">
+      <label class="f-label">Status</label>
+      <select class="f-select" id="colStatus">
+        <option value="planning">Planning</option>
+        <option value="applied">Application Submitted</option>
+        <option value="accepted">Accepted</option>
+        <option value="rejected">Rejected</option>
+        <option value="waitlisted">Waitlisted</option>
+      </select>
+    </div>
+    <button class="primary-btn" id="colSave" type="button">Add College</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ── utils ── */
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function dk(d){ var dt=d||new Date(); return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
+function today(){ return dk(); }
+function load(){ try{ return JSON.parse(localStorage.getItem('academics_v1'))||{}; }catch(e){ return {}; } }
+function save(d){ try{ localStorage.setItem('academics_v1',JSON.stringify(d)); }catch(e){} }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtSec(s){ var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(sc).padStart(2,'0'); }
+function fmtHrs(s){ var h=Math.floor(s/3600),m=Math.floor((s%3600)/60); if(!h&&!m) return '0m'; if(!h) return m+'m'; if(!m) return h+'h'; return h+'h '+m+'m'; }
+function weekSunday(){ var d=new Date(),dt=new Date(d); dt.setDate(d.getDate()-d.getDay()); return dk(dt); }
+function fmtDate(s){ if(!s) return ''; var d=new Date(s+'T12:00:00'); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function diffDays(s){ return Math.round((new Date(s+'T12:00:00').getTime()-new Date(today()+'T12:00:00').getTime())/86400000); }
+
+/* modal helpers */
+function openM(id){ document.getElementById(id).classList.add('show'); }
+function closeM(id){ document.getElementById(id).classList.remove('show'); }
+['hwModal','examModal','colModal'].forEach(function(id){
+  document.getElementById(id).addEventListener('click',function(e){ if(e.target===document.getElementById(id)) closeM(id); });
+});
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') ['hwModal','examModal','colModal'].forEach(closeM); });
+document.getElementById('hwClose').addEventListener('click',function(){ closeM('hwModal'); });
+document.getElementById('examClose').addEventListener('click',function(){ closeM('examModal'); });
+document.getElementById('colClose').addEventListener('click',function(){ closeM('colModal'); });
+
+/* ════════════════════════════
+   STUDY CLOCK
+════════════════════════════ */
+var clockInterval=null, sessionStart=null;
+
+function clockInit(){
+  var saved=localStorage.getItem('ac_session_start');
+  if(saved){ sessionStart=parseInt(saved,10); startClock(false); }
+  renderStats();
+  window.addEventListener('beforeunload',function(){
+    if(sessionStart){ var el=Math.round((Date.now()-sessionStart)/1000); if(el>=5) commitSession(el); localStorage.removeItem('ac_session_start'); }
+  });
+}
+function startClock(stamp){
+  if(stamp){ sessionStart=Date.now(); localStorage.setItem('ac_session_start',sessionStart); }
+  if(clockInterval) clearInterval(clockInterval);
+  clockInterval=setInterval(function(){ document.getElementById('clockDisplay').textContent=fmtSec(Math.round((Date.now()-sessionStart)/1000)); },500);
+  document.getElementById('clockDot').classList.add('on');
+  document.getElementById('clockLabel').style.display='';
+  var btn=document.getElementById('clockBtn');
+  btn.className='clock-btn stop'; btn.innerHTML='⏹&nbsp; Stop Session';
+}
+function stopClock(){
+  if(sessionStart){ var el=Math.round((Date.now()-sessionStart)/1000); if(el>=5) commitSession(el); }
+  clearInterval(clockInterval); clockInterval=null; sessionStart=null;
+  localStorage.removeItem('ac_session_start');
+  document.getElementById('clockDisplay').textContent='00:00:00';
+  document.getElementById('clockDot').classList.remove('on');
+  document.getElementById('clockLabel').style.display='none';
+  var btn=document.getElementById('clockBtn');
+  btn.className='clock-btn'; btn.innerHTML='▶&nbsp; Start Session';
+}
+document.getElementById('clockBtn').addEventListener('click',function(){
+  if(sessionStart) stopClock(); else startClock(true);
+});
+function commitSession(seconds){
+  var d=load(); d.clock=d.clock||{sessions:[]};
+  d.clock.sessions.push({date:today(),ts:Date.now(),seconds:seconds});
+  save(d); renderStats();
+}
+function renderStats(){
+  var d=load(), sessions=(d.clock&&d.clock.sessions)||[];
+  var td=today(), wk=weekSunday();
+  var wkDates=Array.from({length:7},function(_,i){ var dt=new Date(wk+'T12:00:00'); dt.setDate(dt.getDate()+i); return dk(dt); });
+  var todaySec=sessions.filter(function(s){ return s.date===td; }).reduce(function(a,s){ return a+s.seconds; },0);
+  var weekSec =sessions.filter(function(s){ return wkDates.indexOf(s.date)>-1; }).reduce(function(a,s){ return a+s.seconds; },0);
+  var totalSec=sessions.reduce(function(a,s){ return a+s.seconds; },0);
+  document.getElementById('statToday').textContent=fmtHrs(todaySec);
+  document.getElementById('statWeek').textContent =fmtHrs(weekSec);
+  document.getElementById('statTotal').textContent=fmtHrs(totalSec);
+}
+
+/* ════════════════════════════
+   WEEKLY TASKS
+════════════════════════════ */
+var DAY_KEYS=['sun','mon','tue','wed','thu','fri','sat'];
+var DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var activeDay=DAY_KEYS[new Date().getDay()];
+
+function weeklyInit(){
+  var ws=new Date(weekSunday()+'T12:00:00'), we=new Date(ws); we.setDate(we.getDate()+6);
+  var o={month:'short',day:'numeric'};
+  document.getElementById('weekMeta').textContent=ws.toLocaleDateString('en-US',o)+' – '+we.toLocaleDateString('en-US',o);
+  renderDayTabs(); renderTasks();
+}
+function renderDayTabs(){
+  var d=load(), wk=weekSunday(), weekData=(d.tasks&&d.tasks[wk])||{};
+  var todayKey=DAY_KEYS[new Date().getDay()], ws=new Date(weekSunday()+'T12:00:00');
+  var html='';
+  DAY_KEYS.forEach(function(key,i){
+    var dt=new Date(ws); dt.setDate(dt.getDate()+i);
+    var cls='day-tab'+(key===activeDay?' active':'')+(key===todayKey?' today':'')+(((weekData[key]||[]).length)?' has-tasks':'');
+    html+='<button class="'+cls+'" data-day="'+key+'"><span class="day-tab-name">'+DAY_NAMES[i]+'</span><span class="day-tab-num">'+dt.getDate()+'</span><span class="day-tab-dot"></span></button>';
+  });
+  document.getElementById('dayTabs').innerHTML=html;
+  document.getElementById('taskInput').placeholder='Add a task for '+DAY_NAMES[DAY_KEYS.indexOf(activeDay)]+'…';
+}
+document.getElementById('dayTabs').addEventListener('click',function(e){
+  var btn=e.target.closest('.day-tab'); if(!btn) return;
+  activeDay=btn.dataset.day; renderDayTabs(); renderTasks();
+});
+
+function renderTasks(){
+  var d=load(), wk=weekSunday();
+  var tasks=(d.tasks&&d.tasks[wk]&&d.tasks[wk][activeDay])||[];
+  var el=document.getElementById('taskList');
+  if(!tasks.length){ el.innerHTML='<div class="empty">No tasks for this day</div>'; return; }
+  el.innerHTML=tasks.map(function(t){
+    return '<div class="task-item'+(t.done?' is-done':'')+'" data-id="'+t.id+'">'+
+      '<button class="task-cb'+(t.done?' done':'')+'" data-action="toggle" type="button">✓</button>'+
+      '<span class="task-text">'+esc(t.text)+'</span>'+
+      '<button class="task-del" data-action="del" type="button">×</button>'+
+      '</div>';
+  }).join('');
+}
+document.getElementById('taskSubmit').addEventListener('click',addTask);
+document.getElementById('taskInput').addEventListener('keydown',function(e){ if(e.key==='Enter') addTask(); });
+function addTask(){
+  var input=document.getElementById('taskInput'), text=input.value.trim(); if(!text) return;
+  var d=load(), wk=weekSunday();
+  d.tasks=d.tasks||{}; d.tasks[wk]=d.tasks[wk]||{}; d.tasks[wk][activeDay]=d.tasks[wk][activeDay]||[];
+  d.tasks[wk][activeDay].push({id:uid(),text:text,done:false});
+  save(d); input.value=''; renderDayTabs(); renderTasks(); pushStudyGoals(d);
+}
+document.getElementById('taskList').addEventListener('click',function(e){
+  var item=e.target.closest('.task-item'); if(!item) return;
+  var action=e.target.dataset.action; if(!action) return;
+  var d=load(), wk=weekSunday(), tasks=(d.tasks&&d.tasks[wk]&&d.tasks[wk][activeDay])||[];
+  if(action==='toggle'){ var t=tasks.find(function(t){ return t.id===item.dataset.id; }); if(t) t.done=!t.done; }
+  else if(action==='del'){ d.tasks[wk][activeDay]=tasks.filter(function(t){ return t.id!==item.dataset.id; }); }
+  save(d); renderDayTabs(); renderTasks(); pushStudyGoals(d);
+});
+function pushStudyGoals(d){
+  try {
+    var wk=weekSunday(), todayKey=DAY_KEYS[new Date().getDay()];
+    var pending=((d.tasks&&d.tasks[wk]&&d.tasks[wk][todayKey])||[]).filter(function(t){ return !t.done; }).map(function(t){ return t.text; });
+    localStorage.setItem('goals:study_today',JSON.stringify(pending));
+  } catch(e){}
+}
+
+/* ════════════════════════════
+   HOMEWORK
+════════════════════════════ */
+document.getElementById('hwAddBtn').addEventListener('click',function(){
+  document.getElementById('hwSubject').value=''; document.getElementById('hwTitle').value=''; document.getElementById('hwDeadline').value=''; openM('hwModal');
+});
+document.getElementById('hwSave').addEventListener('click',function(){
+  var subj=document.getElementById('hwSubject').value.trim();
+  var title=document.getElementById('hwTitle').value.trim();
+  var dl=document.getElementById('hwDeadline').value;
+  if(!title) return;
+  var d=load(); d.homework=d.homework||[];
+  d.homework.push({id:uid(),subject:subj,title:title,deadline:dl,done:false});
+  save(d); closeM('hwModal'); renderHw();
+});
+function renderHw(){
+  var d=load(), el=document.getElementById('hwList');
+  var items=(d.homework||[]).slice().sort(function(a,b){
+    if(!a.deadline&&!b.deadline) return 0; if(!a.deadline) return 1; if(!b.deadline) return -1;
+    return a.deadline.localeCompare(b.deadline);
+  });
+  if(!items.length){ el.innerHTML='<div class="empty">No homework yet</div>'; return; }
+  el.innerHTML=items.map(function(hw){
+    var dd=hw.deadline?diffDays(hw.deadline):null;
+    var dpClass=hw.done?'':(dd===null?'':(dd<0?'overdue':dd<=3?'soon':''));
+    var dpLabel=hw.deadline?fmtDate(hw.deadline):'';
+    return '<div class="list-item'+(hw.done?' is-done':'')+'" data-id="'+hw.id+'">'+
+      '<button class="item-check'+(hw.done?' done':'')+'" data-action="toggle" type="button">✓</button>'+
+      '<div class="item-left"><div class="item-title">'+esc(hw.title)+'</div>'+(hw.subject?'<div class="item-sub">'+esc(hw.subject)+'</div>':'')+
+      '</div><div class="item-right">'+
+      (dpLabel?'<span class="due-pill '+dpClass+'">'+dpLabel+'</span>':'')+
+      '<button class="item-del" data-action="del" type="button">×</button></div></div>';
+  }).join('');
+}
+document.getElementById('hwList').addEventListener('click',function(e){
+  var item=e.target.closest('.list-item'); if(!item) return;
+  var action=e.target.dataset.action; if(!action) return;
+  var d=load(); d.homework=d.homework||[];
+  if(action==='toggle'){ var hw=d.homework.find(function(x){ return x.id===item.dataset.id; }); if(hw) hw.done=!hw.done; }
+  else if(action==='del'){ d.homework=d.homework.filter(function(x){ return x.id!==item.dataset.id; }); }
+  save(d); renderHw();
+});
+
+/* ════════════════════════════
+   EXAMS
+════════════════════════════ */
+document.getElementById('examAddBtn').addEventListener('click',function(){
+  document.getElementById('examSubject').value=''; document.getElementById('examDate').value=''; document.getElementById('examSyllabus').value=''; openM('examModal');
+});
+document.getElementById('examSave').addEventListener('click',function(){
+  var subj=document.getElementById('examSubject').value.trim();
+  var date=document.getElementById('examDate').value;
+  var syl=document.getElementById('examSyllabus').value.trim();
+  if(!subj||!date) return;
+  var d=load(); d.exams=d.exams||[];
+  d.exams.push({id:uid(),subject:subj,date:date,syllabus:syl});
+  save(d); closeM('examModal'); renderExams();
+});
+function renderExams(){
+  var d=load(), el=document.getElementById('examList');
+  var items=(d.exams||[]).slice().sort(function(a,b){ return a.date.localeCompare(b.date); });
+  if(!items.length){ el.innerHTML='<div class="empty">No exams added yet</div>'; return; }
+  el.innerHTML=items.map(function(ex){
+    var dd=diffDays(ex.date), dlbl, dcls;
+    if(dd<0){ dlbl='Past'; dcls='past'; }
+    else if(dd===0){ dlbl='Today'; dcls='urgent'; }
+    else if(dd<7){ dlbl=dd+'d'; dcls='urgent'; }
+    else if(dd<21){ dlbl=dd+'d'; dcls='soon'; }
+    else{ dlbl=dd+'d'; dcls=''; }
+    return '<div class="list-item" data-id="'+ex.id+'">'+
+      '<div class="item-left"><div class="item-title">'+esc(ex.subject)+'</div>'+(ex.syllabus?'<div class="item-sub">'+esc(ex.syllabus)+'</div>':'')+
+      '</div><div class="item-right">'+
+      '<span style="font-size:11.5px;color:var(--text-tertiary);font-family:var(--font-mono);">'+fmtDate(ex.date)+'</span>'+
+      '<span class="days-pill '+dcls+'">'+dlbl+'</span>'+
+      '<button class="item-del" data-action="del" type="button">×</button></div></div>';
+  }).join('');
+}
+document.getElementById('examList').addEventListener('click',function(e){
+  var item=e.target.closest('.list-item'); if(!item||e.target.dataset.action!=='del') return;
+  var d=load(); d.exams=(d.exams||[]).filter(function(x){ return x.id!==item.dataset.id; }); save(d); renderExams();
+});
+
+/* ════════════════════════════
+   COLLEGES
+════════════════════════════ */
+var SC={ planning:{l:'Planning',c:'ss-planning'}, applied:{l:'Applied',c:'ss-applied'}, accepted:{l:'Accepted',c:'ss-accepted'}, rejected:{l:'Rejected',c:'ss-rejected'}, waitlisted:{l:'Waitlisted',c:'ss-waitlisted'} };
+var COL_ORDER={accepted:0,waitlisted:1,applied:2,planning:3,rejected:4};
+
+document.getElementById('colAddBtn').addEventListener('click',function(){
+  document.getElementById('colName').value=''; document.getElementById('colCourse').value=''; document.getElementById('colStatus').value='planning'; openM('colModal');
+});
+document.getElementById('colSave').addEventListener('click',function(){
+  var name=document.getElementById('colName').value.trim();
+  var course=document.getElementById('colCourse').value.trim();
+  var status=document.getElementById('colStatus').value;
+  if(!name) return;
+  var d=load(); d.colleges=d.colleges||[];
+  d.colleges.push({id:uid(),name:name,course:course,status:status});
+  save(d); closeM('colModal'); renderColleges();
+});
+function renderColleges(){
+  var d=load(), el=document.getElementById('colList');
+  var items=(d.colleges||[]).slice().sort(function(a,b){ return (COL_ORDER[a.status]||5)-(COL_ORDER[b.status]||5); });
+  if(!items.length){ el.innerHTML='<div class="empty">No colleges added yet</div>'; return; }
+  el.innerHTML=items.map(function(col){
+    var sc=SC[col.status]||SC.planning;
+    var opts=Object.keys(SC).map(function(k){ return '<option value="'+k+'"'+(col.status===k?' selected':'')+'>'+SC[k].l+'</option>'; }).join('');
+    return '<div class="list-item" data-id="'+col.id+'">'+
+      '<div class="item-left"><div class="item-title">'+esc(col.name)+'</div>'+(col.course?'<div class="item-sub">'+esc(col.course)+'</div>':'')+
+      '</div><div class="item-right">'+
+      '<select class="status-select '+sc.c+'" data-id="'+col.id+'" data-action="status">'+opts+'</select>'+
+      '<button class="item-del" data-action="del" type="button">×</button></div></div>';
+  }).join('');
+}
+document.getElementById('colList').addEventListener('change',function(e){
+  if(e.target.dataset.action!=='status') return;
+  var d=load(), col=(d.colleges||[]).find(function(x){ return x.id===e.target.dataset.id; });
+  if(col){ col.status=e.target.value; save(d); renderColleges(); }
+});
+document.getElementById('colList').addEventListener('click',function(e){
+  var item=e.target.closest('.list-item'); if(!item||e.target.dataset.action!=='del') return;
+  var d=load(); d.colleges=(d.colleges||[]).filter(function(x){ return x.id!==item.dataset.id; }); save(d); renderColleges();
+});
+
+/* ════════════════════════════
+   BOOT
+════════════════════════════ */
+function renderAll(){ renderStats(); weeklyInit(); renderHw(); renderExams(); renderColleges(); }
+
+document.addEventListener('DOMContentLoaded',function(){
+  clockInit(); renderAll();
+  window.addEventListener('storage',function(e){ if(e.key==='academics_v1') renderAll(); });
+  if(typeof initCloudSync==='function'){
+    initCloudSync({ appKey:'academics', syncedKeys:['academics_v1'], onApplied:renderAll });
+  }
+});
+})();
+</script>
+</body>
+</html>
