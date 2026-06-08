@@ -18,13 +18,23 @@
   const css = `
 .topbar {
   position: sticky; top: 0; z-index: 40;
-  display: flex; justify-content: flex-end; align-items: center;
+  display: flex; justify-content: space-between; align-items: center;
   gap: 8px;
   padding: max(10px, env(safe-area-inset-top)) 14px 8px;
   background: #0a0a0b;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
 }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.topbar-back {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.50); text-decoration: none;
+  -webkit-tap-highlight-color: transparent; transition: color 0.15s, background 0.15s;
+}
+.topbar-back:hover { color: #FAFAFA; background: rgba(255, 255, 255, 0.06); }
+.topbar-back:active { transform: scale(0.92); }
+.topbar-back.hide { visibility: hidden; pointer-events: none; }
 .topbar-water-wrap { display: flex; align-items: stretch; }
 .topbar-water-pill {
   display: inline-flex; align-items: center; gap: 8px;
@@ -150,21 +160,26 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
 
   const topbarHtml = `
 <header class="topbar" id="topbar" role="navigation" aria-label="Quick actions">
-  <div class="topbar-water-wrap">
-    <a href="health.html#water" class="topbar-water-pill" id="topbarWater" aria-label="Water progress">
-      <span class="topbar-pill-dot"></span>
-      <span class="topbar-pill-count" id="topbarWaterCount">0/0</span>
-    </a>
-    <button class="topbar-water-add" id="topbarWaterAdd" aria-label="Log one drink" type="button">+</button>
-  </div>
-  <a href="finance.html" class="topbar-finance-btn" id="topbarFinance" aria-label="Finance">
-    <span class="topbar-finance-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+  <a href="index.html" class="topbar-back" id="topbarBack" aria-label="Back to Dashboard">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
   </a>
+  <div class="topbar-right">
+    <div class="topbar-water-wrap">
+      <a href="health.html#water" class="topbar-water-pill" id="topbarWater" aria-label="Water progress">
+        <span class="topbar-pill-dot"></span>
+        <span class="topbar-pill-count" id="topbarWaterCount">0/0</span>
+      </a>
+      <button class="topbar-water-add" id="topbarWaterAdd" aria-label="Log one drink" type="button">+</button>
+    </div>
+    <a href="finance.html" class="topbar-finance-btn" id="topbarFinance" aria-label="Finance">
+      <span class="topbar-finance-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+    </a>
+  </div>
 </header>`;
 
   const bottombarHtml = `
 <nav class="bottombar" id="bottombar" role="navigation" aria-label="Main tabs">
-  <a href="main.html" class="bottombar-tab" data-page="main">
+  <a href="index.html" class="bottombar-tab" data-page="main">
     <span class="bottombar-tab-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span><span>Main</span>
   </a>
   <a href="health.html" class="bottombar-tab" data-page="health">
@@ -179,6 +194,10 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     const p = (window.location.pathname || '').toLowerCase();
     return p.endsWith('/finance.html') || p.endsWith('finance.html');
   }
+  function isHubPage() {
+    const p = (window.location.pathname || '').toLowerCase();
+    return p === '/' || p === '' || p.endsWith('/index.html') || p.endsWith('index.html');
+  }
   function isEmbedded() {
     try { return window.self !== window.top; } catch (e) { return true; }
   }
@@ -187,8 +206,8 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     const p = (window.location.pathname || '').toLowerCase();
     if (p.endsWith('health.html')) return 'health';
     if (p.endsWith('gym.html')) return 'fitness';
-    if (p.endsWith('main.html')) return 'main';
-    return 'hub';
+    if (isHubPage()) return 'main';
+    return 'none';
   }
 
   function injectStyleAndHTML() {
@@ -209,6 +228,10 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
       t.classList.toggle('active', t.getAttribute('data-page') === active);
     });
     document.body.classList.add('has-bottombar');
+    if (isHubPage()) {
+      const backEl = document.getElementById('topbarBack');
+      if (backEl) backEl.classList.add('hide');
+    }
   }
 
   function calendarDateKey() {
