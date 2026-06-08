@@ -560,9 +560,21 @@ document.getElementById('taskList').addEventListener('click',function(e){
 });
 function pushStudyGoals(d){
   try {
-    var wk=weekSunday(), todayKey=DAY_KEYS[new Date().getDay()];
-    var pending=((d.tasks&&d.tasks[wk]&&d.tasks[wk][todayKey])||[]).filter(function(t){ return !t.done; }).map(function(t){ return t.text; });
-    localStorage.setItem('goals:study_today',JSON.stringify(pending));
+    var wk=weekSunday(), weekData=(d.tasks&&d.tasks[wk])||{};
+    DAY_KEYS.forEach(function(dayKey,i){
+      var dt=new Date(wk+'T12:00:00'); dt.setDate(dt.getDate()+i);
+      var dateStr=dk(dt), goalsKey='goals:'+dateStr;
+      var tasks=(weekData[dayKey]||[]).filter(function(t){ return t.text&&t.text.trim(); });
+      var existing=[];
+      try{ existing=JSON.parse(localStorage.getItem(goalsKey)||'[]'); }catch(e){}
+      var doneMap={};
+      existing.filter(function(g){ return g._acSrc; }).forEach(function(g){ doneMap[g.text]=g.done; });
+      var userGoals=existing.filter(function(g){ return !g._acSrc; });
+      var acGoals=tasks.map(function(t){ return {text:t.text,done:doneMap.hasOwnProperty(t.text)?doneMap[t.text]:false,_acSrc:true}; });
+      var merged=userGoals.concat(acGoals);
+      if(merged.length>0){ localStorage.setItem(goalsKey,JSON.stringify(merged)); }
+      else if(existing.length>0){ localStorage.removeItem(goalsKey); }
+    });
   } catch(e){}
 }
 
@@ -696,10 +708,10 @@ document.getElementById('colList').addEventListener('click',function(e){
 function renderAll(){ renderStats(); weeklyInit(); renderHw(); renderExams(); renderColleges(); }
 
 document.addEventListener('DOMContentLoaded',function(){
-  clockInit(); renderAll();
+  clockInit(); renderAll(); pushStudyGoals(load());
   window.addEventListener('storage',function(e){ if(e.key==='academics_v1') renderAll(); });
   if(typeof initCloudSync==='function'){
-    initCloudSync({ appKey:'academics', syncedKeys:['academics_v1'], onApplied:renderAll });
+    initCloudSync({ appKey:'academics', syncedKeys:['academics_v1'], onApplied:function(){ renderAll(); pushStudyGoals(load()); } });
   }
 });
 })();

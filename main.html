@@ -758,6 +758,34 @@ body::after {
   }
   function setGoals(key, list) { storeSet(key, list); }
 
+  // ---------- academics integration: merge study tasks as goals ----------
+  function getAcademicTasksForDate(dateStr) {
+    try {
+      const ac = storeGet('academics_v1');
+      if (!ac || !ac.tasks) return [];
+      const [yr, mo, dy] = dateStr.split('-').map(Number);
+      const d = new Date(yr, mo - 1, dy);
+      const sunDt = new Date(yr, mo - 1, dy - d.getDay());
+      const sunStr = dateToKey(sunDt);
+      const dayKeys = ['sun','mon','tue','wed','thu','fri','sat'];
+      const dayKey = dayKeys[d.getDay()];
+      const tasks = (ac.tasks[sunStr] && ac.tasks[sunStr][dayKey]) || [];
+      return tasks.filter(t => t.text && t.text.trim()).map(t => ({ text: t.text, done: false, _acSrc: true }));
+    } catch (e) { return []; }
+  }
+  function mergeAcademicGoals() {
+    [getActiveDateString(), getTomorrowDateString()].forEach(dateStr => {
+      const key = 'goals:' + dateStr;
+      const acTasks = getAcademicTasksForDate(dateStr);
+      let goals = getGoals(key);
+      const doneMap = {};
+      goals.filter(g => g._acSrc).forEach(g => { doneMap[g.text] = g.done; });
+      goals = goals.filter(g => !g._acSrc);
+      acTasks.forEach(t => goals.push({ text: t.text, done: doneMap.hasOwnProperty(t.text) ? doneMap[t.text] : false, _acSrc: true }));
+      setGoals(key, goals);
+    });
+  }
+
   // ---------- rollover: pull undone older goals into today ----------
   function rollover() {
     const todayDateStr = getActiveDateString();
@@ -1061,16 +1089,24 @@ body::after {
 
     const text = document.createElement('span');
     text.className = 'gm-text';
-    text.textContent = goal.text;
+    if (goal._acSrc) {
+      const badge = document.createElement('span');
+      badge.style.cssText = 'font-size:11px;opacity:0.5;margin-right:5px;';
+      badge.textContent = '📚';
+      text.appendChild(badge);
+      text.appendChild(document.createTextNode(goal.text));
+    } else {
+      text.textContent = goal.text;
+      makeInlineEdit(text, null, idx, key, reload);
+    }
     li.appendChild(text);
-    makeInlineEdit(text, null, idx, key, reload);
 
     const queueBtn = document.createElement('button');
     queueBtn.type = 'button';
     queueBtn.className = 'gm-queue-btn' + (goal.queued ? ' gm-queue-active' : '');
     queueBtn.textContent = '⚡';
     queueBtn.title = 'Queue for productivity window';
-    if (readOnly) queueBtn.disabled = true;
+    if (readOnly || goal._acSrc) queueBtn.disabled = true;
     queueBtn.addEventListener('click', () => {
       const list = getGoals(key);
       if (!list[idx]) return;
@@ -1081,18 +1117,20 @@ body::after {
     });
     li.appendChild(queueBtn);
 
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'goal-delete';
-    del.setAttribute('aria-label', 'Delete goal');
-    del.textContent = '×';
-    del.addEventListener('click', () => {
-      const list = getGoals(key);
-      list.splice(idx, 1);
-      setGoals(key, list);
-      reload();
-    });
-    li.appendChild(del);
+    if (!goal._acSrc) {
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'goal-delete';
+      del.setAttribute('aria-label', 'Delete goal');
+      del.textContent = '×';
+      del.addEventListener('click', () => {
+        const list = getGoals(key);
+        list.splice(idx, 1);
+        setGoals(key, list);
+        reload();
+      });
+      li.appendChild(del);
+    }
 
     wireDragReorder(li, null, key, reload);
     return li;
@@ -1293,6 +1331,7 @@ body::after {
 
   // ---------- Boot ----------
   rollover();
+  mergeAcademicGoals();
   processStreak();
   loadToday();
   loadTomorrow();
@@ -1302,7 +1341,8 @@ body::after {
   startTicker();
 
   // Re-render when storage changes from another tab (or our bridged parent).
-  window.addEventListener('storage', () => {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'academics_v1') mergeAcademicGoals();
     loadToday(); loadTomorrow(); renderStreak();
   });
 })();
@@ -1314,6 +1354,7 @@ document.addEventListener('DOMContentLoaded', function () {
     appKey: 'goals',
     syncedPrefixes: ['goals:'],
     onApplied: function () {
+      mergeAcademicGoals();
       window.dispatchEvent(new CustomEvent('goals-changed'));
       window.dispatchEvent(new Event('storage'));
     }

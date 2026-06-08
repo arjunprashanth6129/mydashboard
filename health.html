@@ -355,7 +355,10 @@ main {
   gap: 6px;
   align-items: center;
 }
+.stack-add-row > * { min-width: 0; }
 .stack-input {
+  width: 100%;
+  min-width: 0;
   font-size: 13px;
   padding: 9px 11px;
   border-radius: 10px;
@@ -458,7 +461,11 @@ main {
   .stack-add-row { grid-template-columns: 1fr 1fr; }
   .stack-add-row .stack-add-btn { grid-column: 1 / -1; }
   .stack-add-row .stack-select { grid-column: 1 / -1; }
-  .stack-search-results { width: 100%; }
+  .stack-search-results { width: 100%; left: 0; right: 0; }
+}
+@media (max-width: 440px) {
+  .stack-add-row { grid-template-columns: 1fr; }
+  .stack-add-row .stack-add-btn { grid-column: auto; }
 }
 
 ::selection { background: rgba(224, 118, 88, 0.3); color: var(--text-primary); }
